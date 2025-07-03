@@ -3,7 +3,9 @@ from surrealdb import AsyncSurreal
 
 
 class AuthError(Exception):
-    """Custom exception for SurrealDB authentication errors."""
+    """
+    Custom exception for SurrealDB authentication errors.
+    """
     pass
 
 
