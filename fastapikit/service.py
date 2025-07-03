@@ -2,10 +2,8 @@ from typing import Callable, Generic, Type, TypeVar
 
 from fastapi import Depends
 
-from .repository import Repository
+from .repository import Repository, RepoType
 
-
-RepoType = TypeVar('RepoType', bound=Repository)
 
 class Service(Generic[RepoType]):
     def __init__(self, repo: RepoType):

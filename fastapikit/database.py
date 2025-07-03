@@ -1,12 +1,37 @@
-from typing import AsyncGenerator, Callable, Optional
-from surrealdb import AsyncSurreal
+import functools
+from typing import AsyncGenerator, Callable, List, Optional, Type, TypeVar
 
+from surrealdb import AsyncSurreal
+from pydantic import BaseModel, ValidationError
+
+
+########################
+#####  Exceptions  #####
+########################
+
+class ResponseParasingError(Exception):
+    """
+    Custom exception for response parsing errors.
+    """
+    pass
 
 class AuthError(Exception):
     """
     Custom exception for SurrealDB authentication errors.
     """
     pass
+
+
+class QueryError(Exception):
+    """
+    Custom exception for database query errors.
+    """
+    pass
+
+
+########################
+#####  Driver  #########
+########################
 
 
 class Driver:
@@ -63,6 +88,11 @@ class Driver:
             self.connected = False
 
 
+########################
+#####  Provider  #######
+########################
+
+
 def make_driver_provider(
     host: str,
     ns: str,
@@ -87,3 +117,66 @@ def make_driver_provider(
             await driver.close()
 
     return provider
+
+
+########################
+#####  Helpers  ########
+########################
+
+
+def simplify_record_ids(data):
+    """
+    Removes table name from the record id leaving only identifier.
+
+    This is useful mostly for UUID identifiers.
+    """
+    if isinstance(data, list):
+        return [simplify_record_ids(item) for item in data]
+    
+    elif isinstance(data, dict):
+        return {k: simplify_record_ids(v) for k, v in data.items()}
+    
+    elif isinstance(data, BaseModel):
+        return simplify_record_ids(data.model_dump())
+    
+    elif hasattr(data, "table_name") and hasattr(data, "id") and isinstance(data.id, str):
+        return data.id
+    else:
+        return data
+
+
+def handle_db_results(serialize: bool = True) -> Callable:
+    """
+    Decorator to handle database results
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            try:
+                response = await func(*args, **kwargs)
+                if response and serialize:
+                    return simplify_record_ids(response)
+                return response
+            except Exception as e:
+                raise QueryError("Database error occurred") from e
+
+        return wrapper
+    
+    return decorator
+
+
+ModelType = TypeVar("ModelType", bound=BaseModel)
+
+def parse_list(model_class: Type[ModelType], data: list) -> List[ModelType]:
+    """
+    Parses a list of records into a list of models.
+    """
+    parsed_data = []
+    for item in data:
+        try:
+            parsed_data.append(model_class(**item))
+        except ValidationError as e:
+            raise ResponseParasingError(model_class.__name__, str(e)) from e
+    
+    return parsed_data
+
