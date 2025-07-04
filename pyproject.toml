@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fastapikitx"
-version = "0.1.0"
+version = "0.1.1"
 description = "A lightweight FastAPI toolkit for structuring apps with services, repositories, and utils."
 readme = "README.md"
 license = { text = "MIT" }
@@ -16,9 +16,6 @@ dependencies = [
   "pydantic>=2.0",
   "typing-extensions>=4.0",
 ]
-packages = [
-    "fastapikit"
-]
 
 requires-python = ">=3.8"
 
@@ -26,3 +23,6 @@ requires-python = ">=3.8"
 "Homepage" = "https://github.com/nokokiii/fastapikit"
 "Repository" = "https://github.com/nokokiii/fastapikit"
 "Bug Tracker" = "https://github.com/nokokiii/fastapikit/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fastapikit"]
