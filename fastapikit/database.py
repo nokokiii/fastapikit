@@ -1,5 +1,13 @@
 import functools
-from typing import AsyncGenerator, Callable, List, Optional, Type, TypeVar
+from typing import (
+    AsyncGenerator,
+    Callable, 
+    List, 
+    Optional, 
+    Type, 
+    TypeVar, 
+    Union
+)
 
 from surrealdb import AsyncSurreal
 from pydantic import BaseModel, ValidationError
@@ -30,7 +38,7 @@ class QueryError(Exception):
 
 
 ########################
-#####  Driver  #########
+######  Driver  ########
 ########################
 
 
@@ -141,15 +149,18 @@ def simplify_record_ids(data):
     
     elif hasattr(data, "table_name") and hasattr(data, "id") and isinstance(data.id, str):
         return data.id
-    else:
+    else:   
         return data
 
 
-def handle_db_results(serialize: bool = True) -> Callable:
+def handle_db_results(_func: Union[Callable, None] = None, *, serialize: bool = True) -> Callable:
     """
-    Decorator to handle database results
+    Decorator to handle database results.
+    Can be used with or without parentheses:
+    - @handle_db_results
+    - @handle_db_results(serialize=False)
     """
-    def decorator(func):
+    def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             try:
@@ -159,10 +170,11 @@ def handle_db_results(serialize: bool = True) -> Callable:
                 return response
             except Exception as e:
                 raise QueryError("Database error occurred") from e
-
         return wrapper
-    
-    return decorator
+
+    if callable(_func):
+        return decorator(_func)  # Used as @handle_db_results
+    return decorator  
 
 
 ModelType = TypeVar("ModelType", bound=BaseModel)
